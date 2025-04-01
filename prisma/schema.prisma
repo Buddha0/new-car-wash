@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id          String       @id @default(uuid())
+  clerkId     String?      @unique   // Added this field to store Clerk user ID
+  name        String
+  email       String       @unique
+  phone       String?      @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  appointments Appointment[]
+  vehicles     Vehicle[]
+  payments     Payment[]
+  reviews      Review[]
+}
+
+
+// Service model
+model Service {
+  id          String      @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal
+  duration    Int        // Duration in minutes
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  appointments Appointment[]
+  reviews      Review[]
+}
+
+// Appointment model
+model Appointment {
+  id        String           @id @default(uuid())
+  user      User             @relation(fields: [userId], references: [id])
+  userId    String
+  service   Service          @relation(fields: [serviceId], references: [id])
+  serviceId String
+  vehicle   Vehicle          @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+  date      DateTime
+  timeSlot  String           // E.g., "9:00 AM - 12:00 PM"
+  status    AppointmentStatus @default(PENDING)
+  payment   Payment?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+// Vehicle model
+model Vehicle {
+  id          String       @id @default(uuid())
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  type        String       // E.g., "Sedan", "SUV"
+  model       String
+  plate       String       @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  appointments Appointment[]
+}
+
+// Payment model
+model Payment {
+  id             String         @id @default(uuid())
+  user           User           @relation(fields: [userId], references: [id])
+  userId         String
+  appointment    Appointment    @relation(fields: [appointmentId], references: [id])
+  appointmentId  String @unique  // Ensure one-to-one relationship
+  amount         Decimal
+  status         PaymentStatus  @default(PENDING)
+  method         PaymentMethod
+  transactionId  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  UPI
+  PAYPAL
+}
+
+// Staff model
+model Staff {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  role      StaffRole  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum StaffRole {
+  CLEANER
+  MANAGER
+  ADMIN
+}
+
+// Review model
+model Review {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  service   Service  @relation(fields: [serviceId], references: [id])
+  serviceId String
+  rating    Int      // Rating from 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
