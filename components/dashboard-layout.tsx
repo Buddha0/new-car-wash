@@ -107,7 +107,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="md:hidden">
+            <Button variant="outline" size="icon" className="xl:hidden">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle navigation menu</span>
             </Button>
@@ -151,7 +151,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
         </Sheet>
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <Car className="h-6 w-6 text-primary" />
-          <span className="hidden md:inline-block">SparkleWash</span>
+          <span className="hidden xl:inline-block">SparkleWash</span>
         </Link>
         <div className="ml-auto flex items-center gap-4">
           <DropdownMenu>
@@ -217,8 +217,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
             )}
             <span className="sr-only">Toggle notifications</span>
           </Button>
-          
-          
+    
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -255,8 +254,8 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
           </DropdownMenu>
         </div>
       </header>
-      <div className="grid flex-1 md:grid-cols-[220px_1fr]">
-        <aside className="hidden border-r bg-muted/40 md:block">
+      <div className="grid flex-1 xl:grid-cols-[220px_1fr]">
+        <aside className="hidden border-r bg-muted/40 xl:block">
           <nav className="grid gap-2 p-4 text-sm font-medium">
             {navItems.map((item) => (
               <Link

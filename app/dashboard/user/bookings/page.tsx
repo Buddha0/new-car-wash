@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -19,74 +19,99 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calendar, Car, Clock, Download, FileText, Filter, Pencil, Search, X } from "lucide-react"
 import { format } from "date-fns"
+import fetchUserAppointments from "@/app/actions/fetch-user-appointments"
 
 // Sample booking data
-const bookings = [
-  {
-    id: "B001",
-    service: "Deluxe Wash",
-    vehicle: "Tesla Model 3",
-    date: new Date(2023, 4, 15, 14, 30),
-    status: "completed",
-    price: 69.99,
-    employee: "Mike Johnson",
-    location: "Downtown Branch",
-    notes: "Customer requested extra attention to wheels",
-    receipt: "INV-2023-05-15-001",
-  },
-  {
-    id: "B002",
-    service: "Interior Clean",
-    vehicle: "Tesla Model 3",
-    date: new Date(2023, 3, 28, 10, 0),
-    status: "completed",
-    price: 39.99,
-    employee: "Lisa Smith",
-    location: "Downtown Branch",
-    notes: "",
-    receipt: "INV-2023-04-28-003",
-  },
-  {
-    id: "B003",
-    service: "Premium Wash",
-    vehicle: "Honda Accord",
-    date: new Date(2023, 3, 10, 15, 30),
-    status: "completed",
-    price: 49.99,
-    employee: "John Miller",
-    location: "Westside Branch",
-    notes: "",
-    receipt: "INV-2023-04-10-007",
-  },
-  {
-    id: "B004",
-    service: "Full Detail",
-    vehicle: "Tesla Model 3",
-    date: new Date(2023, 5, 5, 13, 0),
-    status: "scheduled",
-    price: 129.99,
-    employee: "Lisa Smith",
-    location: "Downtown Branch",
-    notes: "New car preparation",
-    receipt: "",
-  },
-  {
-    id: "B005",
-    service: "Basic Wash",
-    vehicle: "Honda Accord",
-    date: new Date(2023, 5, 12, 11, 30),
-    status: "scheduled",
-    price: 24.99,
-    employee: "To be assigned",
-    location: "Westside Branch",
-    notes: "",
-    receipt: "",
-  },
-]
+
+
+// const bookings = [
+//   {
+//     id: "B001",
+//     service: "Deluxe Wash",
+//     vehicle: "Tesla Model 3",
+//     date: new Date(2023, 4, 15, 14, 30),
+//     status: "completed",
+//     price: 69.99,
+//     employee: "Mike Johnson",
+//     location: "Downtown Branch",
+//     notes: "Customer requested extra attention to wheels",
+//     receipt: "INV-2023-05-15-001",
+//   },
+//   {
+//     id: "B002",
+//     service: "Interior Clean",
+//     vehicle: "Tesla Model 3",
+//     date: new Date(2023, 3, 28, 10, 0),
+//     status: "completed",
+//     price: 39.99,
+//     employee: "Lisa Smith",
+//     location: "Downtown Branch",
+//     notes: "",
+//     receipt: "INV-2023-04-28-003",
+//   },
+//   {
+//     id: "B003",
+//     service: "Premium Wash",
+//     vehicle: "Honda Accord",
+//     date: new Date(2023, 3, 10, 15, 30),
+//     status: "completed",
+//     price: 49.99,
+//     employee: "John Miller",
+//     location: "Westside Branch",
+//     notes: "",
+//     receipt: "INV-2023-04-10-007",
+//   },
+//   {
+//     id: "B004",
+//     service: "Full Detail",
+//     vehicle: "Tesla Model 3",
+//     date: new Date(2023, 5, 5, 13, 0),
+//     status: "scheduled",
+//     price: 129.99,
+//     employee: "Lisa Smith",
+//     location: "Downtown Branch",
+//     notes: "New car preparation",
+//     receipt: "",
+//   },
+//   {
+//     id: "B005",
+//     service: "Basic Wash",
+//     vehicle: "Honda Accord",
+//     date: new Date(2023, 5, 12, 11, 30),
+//     status: "scheduled",
+//     price: 24.99,
+//     employee: "To be assigned",
+//     location: "Westside Branch",
+//     notes: "",
+//     receipt: "",
+//   },
+// ]
 
 export default function BookingHistory() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedBooking, setSelectedBooking] = useState<(typeof bookings)[0] | null>(null)
+  const [bookings, setBookings] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // Function to fetch the bookings
+    const fetchBookings = async () => {
+      try {
+        setLoading(true) // Start loading
+        const appointments = await fetchUserAppointments() // Fetch appointments
+        setBookings(appointments) // Set the fetched appointments into state
+      } catch (error: any) {
+        // setError(error.message) // Handle any errors
+      } finally {
+        setLoading(false) // Stop loading after fetch
+      }
+    }
+
+    fetchBookings() // Call the function
+  }, [])
+
+  console.log(bookings)
+
 
   const upcomingBookings = bookings
     .filter((booking) => booking.status === "scheduled" && booking.date > new Date())
@@ -128,6 +153,8 @@ export default function BookingHistory() {
         return <Badge variant="outline">{status}</Badge>
     }
   }
+
+  
 
   return (
     <DashboardLayout userRole="user">

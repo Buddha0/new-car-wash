@@ -1,91 +1,97 @@
-import { Webhook } from 'svix'
-import { headers } from 'next/headers'
-import { WebhookEvent } from '@clerk/nextjs/server'
-import { PrismaClient } from '@prisma/client'
+import { Webhook } from 'svix';
+import { headers } from 'next/headers';
+import { WebhookEvent } from '@clerk/nextjs/server';
+import { clerkClient } from '@clerk/nextjs/server';
+import { PrismaClient } from '@prisma/client'; // Removed UserRole import
 
-// Initialize Prisma client
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
-  const SIGNING_SECRET = process.env.SIGNING_SECRET
+  const SIGNING_SECRET = process.env.SIGNING_SECRET;
 
   if (!SIGNING_SECRET) {
-    throw new Error('Error: Please add SIGNING_SECRET from Clerk Dashboard to .env or .env')
+    throw new Error('Error: Please add SIGNING_SECRET from Clerk Dashboard to .env or .env');
   }
 
-  // Create new Svix instance with secret
-  const wh = new Webhook(SIGNING_SECRET)
+  const wh = new Webhook(SIGNING_SECRET);
+  const headerPayload = await headers();
+  const svix_id = headerPayload.get('svix-id');
+  const svix_timestamp = headerPayload.get('svix-timestamp');
+  const svix_signature = headerPayload.get('svix-signature');
 
-  // Get headers
-  const headerPayload = await headers()
-  const svix_id = headerPayload.get('svix-id')
-  const svix_timestamp = headerPayload.get('svix-timestamp')
-  const svix_signature = headerPayload.get('svix-signature')
-
-  // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
-    return new Response('Error: Missing Svix headers', {
-      status: 400,
-    })
+    return new Response('Error: Missing Svix headers', { status: 400 });
   }
 
-  // Get body
-  const payload = await req.json()
-  const body = JSON.stringify(payload)
+  const payload = await req.json();
+  const body = JSON.stringify(payload);
 
-  let evt: WebhookEvent
+  let evt: WebhookEvent;
 
-  // Verify payload with headers
   try {
-    evt = wh.verify(body, {
-      'svix-id': svix_id,
-      'svix-timestamp': svix_timestamp,
-      'svix-signature': svix_signature,
-    }) as WebhookEvent
+    evt = wh.verify(body, { 'svix-id': svix_id, 'svix-timestamp': svix_timestamp, 'svix-signature': svix_signature }) as WebhookEvent;
   } catch (err) {
-    console.error('Error: Could not verify webhook:', err)
-    return new Response('Error: Verification error', {
-      status: 400,
-    })
+    console.error('Error: Could not verify webhook:', err);
+    return new Response('Error: Verification error', { status: 400 });
   }
 
-  // Get the event type
-  const eventType = evt.type
-  console.log(`Received webhook with event type of ${eventType}`)
-  
-  // Handle user creation event
-  if (eventType === 'user.created') {
+  const eventType = evt.type;
+
+  if (eventType === 'user.created' || eventType === 'user.updated') {
+    const userId = evt.data.id;
+    const email = evt.data.email_addresses[0].email_address;
+    const name = `${evt.data.first_name || ''} ${evt.data.last_name || ''}`.trim();
+    const profileImage = evt.data.image_url;
+    const phone = evt.data.phone_numbers && evt.data.phone_numbers.length > 0 ? evt.data.phone_numbers[0].phone_number : null;
+    let role = 'CUSTOMER'; // Default role as a string
+
+    if (!userId) {
+      return new Response('Error: User ID not found in webhook payload', { status: 400 });
+    }
+
     try {
-      // Extract user data from the webhook payload
-      const { id: clerkUserId, email_addresses, first_name, last_name, phone_numbers } = evt.data
-      
-      // Get the primary email
-      const primaryEmail = email_addresses?.find(email => email.id === evt.data.primary_email_address_id)?.email_address
-      
-      // Get phone number if available
-      const phoneNumber = phone_numbers && phone_numbers.length > 0 ? phone_numbers[0].phone_number : null
-      
-      // Prepare user name
-      const fullName = first_name && last_name 
-        ? `${first_name} ${last_name}` 
-        : first_name || (primaryEmail ? primaryEmail.split('@')[0] : 'User')
-      
-      // Create user in Prisma database
-      const newUser = await prisma.user.create({
-        data: {
-          clerkId: clerkUserId,
-          name: fullName,
-          email: primaryEmail || '',
-          phone: phoneNumber,
-       
-        },
-      })
-      
-      console.log('User created in database:', newUser)
+      const client = await clerkClient();
+
+      if (eventType === 'user.created') {
+        await client.users.updateUserMetadata(userId, { publicMetadata: { role: 'customer' } });
+        console.log(`Assigned role 'customer' to user with ID ${userId}`);
+
+        await prisma.user.create({
+          data: {
+            clerkId: userId,
+            name: name,
+            email: email,
+            phone: phone,
+            profileImage: profileImage,
+            role: role,
+          },
+        });
+
+        console.log(`User created in database with Clerk ID ${userId}`);
+      } else if (eventType === 'user.updated') {
+        const clerkUser = await client.users.getUser(userId);
+        if (clerkUser.publicMetadata && clerkUser.publicMetadata.role) {
+          role = clerkUser.publicMetadata.role as string; // Directly use the string value
+        }
+
+        await prisma.user.update({
+          where: { clerkId: userId },
+          data: {
+            name: name,
+            email: email,
+            phone: phone,
+            profileImage: profileImage,
+            role: role,
+          },
+        });
+
+        console.log(`User updated in database with Clerk ID ${userId} and role ${role}`);
+      }
     } catch (error) {
-      console.error('Error creating user in database:', error)
+      console.error('Error assigning role or creating user:', error);
+      return new Response('Error: Could not assign role or create user', { status: 500 });
     }
   }
 
-  return new Response('Webhook received', { status: 200 })
+  return new Response('Webhook received and role assigned/user created if user created', { status: 200 });
 }

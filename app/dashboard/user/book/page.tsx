@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Check, ChevronRight, Clock, CreditCard, Info } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
+import CreateAppointment from "@/app/actions/create-appointment"
 
 const timeSlots = [
   "9:00 AM",
@@ -113,19 +115,74 @@ export default function BookService() {
   const [selectedVehicle, setSelectedVehicle] = useState<string>("v1")
   const [currentStep, setCurrentStep] = useState(1)
   const [paymentMethod, setPaymentMethod] = useState<string>("saved-card")
+  const [notes, setNotes] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleNextStep = () => {
-    setCurrentStep(currentStep + 1)
-  }
+    // Validate current step before proceeding
+    if (currentStep === 1) {
+      if (!selectedService) {
+        toast( "Service Required",);
+        return;
+      }
+      if (!selectedVehicle) {
+       toast("Vechile required")
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (!date) {
+        toast( "Date Required",);
+        console.log("asd")
+        return;
+      }
+      if (!timeSlot) {
+        toast("Time Required")
+        console.log("asd")
+        return;
+      }
+    }
+
+    setCurrentStep(currentStep + 1);
+  };
 
   const handlePreviousStep = () => {
     setCurrentStep(currentStep - 1)
   }
 
-  const handleSubmit = () => {
-    // In a real app, this would submit the booking to the server
-    alert("Booking confirmed! You will receive a confirmation email shortly.")
-    // Redirect to dashboard or booking confirmation page
+  const handleSubmit = async () => {
+    if (!date || !timeSlot) {
+      toast( "Missing Information",);
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      // Create appointment using our function
+      const appointmentData = {
+        serviceId: selectedService,
+        vehicleId: selectedVehicle,
+        date: date,
+        timeSlot: timeSlot,
+        notes: notes,
+        paymentMethod: paymentMethod,
+      };
+
+      console.log("this is the appointment data")
+      // Create the appointment
+      const result = await CreateAppointment(appointmentData);
+
+      // Show success message
+      toast( "Booking confirmed!",);
+
+      // Redirect to bookings page
+      // router.push(`/dashboard/user/bookings/${result.id}`);
+    } catch (error) {
+      // Show error message
+      toast( "Booking failed!",);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   const selectedServiceDetails = services.find((service) => service.id === selectedService)
@@ -254,9 +311,11 @@ export default function BookService() {
                   <CardDescription>Any special instructions for your service</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Textarea
+                  / <Textarea
                     placeholder="E.g., Please pay extra attention to the stain on the passenger seat"
                     className="min-h-[120px]"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                   />
                 </CardContent>
               </Card>
@@ -465,7 +524,9 @@ export default function BookService() {
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit}>Confirm Booking</Button>
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting ? "Processing..." : "Confirm Booking"}
+               </Button>
             )}
           </div>
         </div>

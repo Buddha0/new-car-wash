@@ -1,10 +1,15 @@
+"use server"
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { SignedIn, SignedOut, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { Droplets, Menu } from "lucide-react";
 import Link from "next/link";
 
-export default function Header() {
+export default async function Header() {
+
+    
+    
     return (
 
 
