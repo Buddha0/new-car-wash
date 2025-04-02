@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -9,11 +9,14 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Check, ChevronRight, Clock, CreditCard, Info } from "lucide-react"
+import { Check, ChevronRight, Clock, CreditCard, Info, Plus } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import CreateAppointment from "@/app/actions/create-appointment"
+import { createAppointment } from "@/app/actions/appointments"
+import { getUserVehicles, createVehicle } from "@/app/actions/vehicles"
+import { getServices } from "@/app/actions/services"
+import { useAuth } from "@clerk/nextjs"
 
 const timeSlots = [
   "9:00 AM",
@@ -35,158 +38,137 @@ const timeSlots = [
   "5:00 PM",
 ]
 
-const services = [
-  {
-    id: "basic-wash",
-    name: "Basic Wash",
-    price: 24.99,
-    duration: "30 min",
-    description: "Exterior wash, wheel cleaning, and basic drying.",
-    features: ["Exterior Wash", "Wheel Cleaning", "Basic Drying"],
-  },
-  {
-    id: "premium-wash",
-    name: "Premium Wash",
-    price: 49.99,
-    duration: "45 min",
-    description: "Everything in Basic Wash plus waxing, tire shine, and interior vacuum.",
-    features: ["Exterior Wash", "Wheel Cleaning", "Waxing", "Tire Shine", "Interior Vacuum"],
-  },
-  {
-    id: "deluxe-wash",
-    name: "Deluxe Wash",
-    price: 69.99,
-    duration: "60 min",
-    description: "Our most comprehensive wash with premium wax, interior cleaning, and dashboard conditioning.",
-    features: [
-      "Premium Exterior Wash",
-      "Wheel Detailing",
-      "Premium Waxing",
-      "Tire Shine",
-      "Full Interior Vacuum",
-      "Dashboard Conditioning",
-      "Window Cleaning",
-    ],
-  },
-  {
-    id: "interior-clean",
-    name: "Interior Clean",
-    price: 39.99,
-    duration: "45 min",
-    description: "Thorough interior cleaning including vacuum, surfaces, and windows.",
-    features: [
-      "Full Interior Vacuum",
-      "Dashboard Conditioning",
-      "Door Panel Cleaning",
-      "Window Cleaning",
-      "Seat Cleaning",
-    ],
-  },
-  {
-    id: "full-detail",
-    name: "Full Detail",
-    price: 129.99,
-    duration: "120 min",
-    description: "Complete interior and exterior detailing for the ultimate clean.",
-    features: [
-      "Premium Exterior Wash",
-      "Clay Bar Treatment",
-      "Premium Waxing",
-      "Wheel Detailing",
-      "Tire Shine",
-      "Full Interior Vacuum",
-      "Upholstery Shampooing",
-      "Leather Conditioning",
-      "Dashboard & Trim Detailing",
-      "Window Cleaning",
-    ],
-  },
-]
-
-const vehicles = [
-  { id: "v1", name: "Tesla Model 3", color: "White", license: "ABC123" },
-  { id: "v2", name: "Honda Accord", color: "Black", license: "XYZ789" },
-]
-
 export default function BookService() {
+  const { userId } = useAuth();
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [timeSlot, setTimeSlot] = useState<string | null>(null)
-  const [selectedService, setSelectedService] = useState<string>("premium-wash")
-  const [selectedVehicle, setSelectedVehicle] = useState<string>("v1")
+  const [selectedService, setSelectedService] = useState<string>("")
+  const [selectedVehicle, setSelectedVehicle] = useState<string>("")
   const [currentStep, setCurrentStep] = useState(1)
   const [paymentMethod, setPaymentMethod] = useState<string>("saved-card")
-  const [notes, setNotes] = useState<string>("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notes, setNotes] = useState<string>("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [vehicles, setVehicles] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+  const [isAddingVehicle, setIsAddingVehicle] = useState(false)
+  const [newVehicle, setNewVehicle] = useState({
+    type: "",
+    model: "",
+    plate: "",
+  })
+
+  useEffect(() => {
+    if (userId) {
+      loadVehicles();
+      loadServices();
+    }
+  }, [userId]);
+
+  const loadServices = async () => {
+    try {
+      const fetchedServices = await getServices();
+      setServices(fetchedServices);
+      if (fetchedServices.length > 0) {
+        setSelectedService(fetchedServices[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading services:', error);
+      toast.error('Failed to load services');
+    }
+  };
+
+  const loadVehicles = async () => {
+    try {
+      const userVehicles = await getUserVehicles();
+      setVehicles(userVehicles);
+      if (userVehicles.length > 0) {
+        setSelectedVehicle(userVehicles[0].id);
+      }
+    } catch (error) {
+      console.error('Error loading vehicles:', error);
+      toast.error('Failed to load vehicles');
+    }
+  };
+
+  const handleAddVehicle = async () => {
+    if (!newVehicle.type || !newVehicle.model || !newVehicle.plate) {
+      toast.error('Please fill in all vehicle details');
+      return;
+    }
+
+    try {
+      const vehicle = await createVehicle({
+        type: newVehicle.type,
+        model: newVehicle.model,
+        plate: newVehicle.plate,
+      });
+      setVehicles([...vehicles, vehicle]);
+      setSelectedVehicle(vehicle.id);
+      setIsAddingVehicle(false);
+      setNewVehicle({ type: "", model: "", plate: "" });
+      toast.success('Vehicle added successfully');
+    } catch (error) {
+      console.error('Error adding vehicle:', error);
+      toast.error('Failed to add vehicle');
+    }
+  };
 
   const handleNextStep = () => {
-    // Validate current step before proceeding
     if (currentStep === 1) {
       if (!selectedService) {
-        toast( "Service Required",);
+        toast.error("Please select a service");
         return;
       }
       if (!selectedVehicle) {
-       toast("Vechile required")
+        toast.error("Please select a vehicle");
         return;
       }
     } else if (currentStep === 2) {
       if (!date) {
-        toast( "Date Required",);
-        console.log("asd")
+        toast.error("Please select a date");
         return;
       }
       if (!timeSlot) {
-        toast("Time Required")
-        console.log("asd")
+        toast.error("Please select a time slot");
         return;
       }
     }
-
     setCurrentStep(currentStep + 1);
   };
 
   const handlePreviousStep = () => {
-    setCurrentStep(currentStep - 1)
-  }
+    setCurrentStep(currentStep - 1);
+  };
 
   const handleSubmit = async () => {
-    if (!date || !timeSlot) {
-      toast( "Missing Information",);
+    if (!date || !timeSlot || !selectedVehicle || !selectedService) {
+      toast.error("Please complete all required fields");
       return;
     }
 
     try {
       setIsSubmitting(true);
-
-      // Create appointment using our function
-      const appointmentData = {
+      const appointment = await createAppointment({
         serviceId: selectedService,
         vehicleId: selectedVehicle,
         date: date,
         timeSlot: timeSlot,
         notes: notes,
         paymentMethod: paymentMethod,
-      };
+      });
 
-      console.log("this is the appointment data")
-      // Create the appointment
-      const result = await CreateAppointment(appointmentData);
-
-      // Show success message
-      toast( "Booking confirmed!",);
-
-      // Redirect to bookings page
-      // router.push(`/dashboard/user/bookings/${result.id}`);
+      toast.success("Booking created successfully!");
+      // You can add navigation to the bookings page here
     } catch (error) {
-      // Show error message
-      toast( "Booking failed!",);
+      console.error('Error creating appointment:', error);
+      toast.error("Failed to create booking");
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  const selectedServiceDetails = services.find((service) => service.id === selectedService)
-  const selectedVehicleDetails = vehicles.find((vehicle) => vehicle.id === selectedVehicle)
+  const selectedServiceDetails = services.find((service) => service.id === selectedService);
+  const selectedVehicleDetails = vehicles.find((vehicle) => vehicle.id === selectedVehicle);
 
   return (
     <DashboardLayout userRole="user">
@@ -261,7 +243,7 @@ export default function BookService() {
                           </div>
                           <p className="text-sm text-muted-foreground">{service.description}</p>
                           <ul className="mt-2 text-sm grid gap-1">
-                            {service.features.map((feature, index) => (
+                            {service.features.map((feature: string, index: number) => (
                               <li key={index} className="flex items-center gap-2">
                                 <Check className="h-4 w-4 text-primary" />
                                 {feature}
@@ -281,27 +263,81 @@ export default function BookService() {
                   <CardDescription>Choose which vehicle you want serviced</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RadioGroup value={selectedVehicle} onValueChange={setSelectedVehicle} className="grid gap-4">
-                    {vehicles.map((vehicle) => (
-                      <div key={vehicle.id}>
-                        <RadioGroupItem value={vehicle.id} id={vehicle.id} className="peer sr-only" />
-                        <Label
-                          htmlFor={vehicle.id}
-                          className="flex items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
-                        >
-                          <div>
-                            <div className="font-semibold">{vehicle.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {vehicle.color} • License: {vehicle.license}
-                            </div>
+                  {!isAddingVehicle ? (
+                    <>
+                      <RadioGroup value={selectedVehicle} onValueChange={setSelectedVehicle} className="grid gap-4">
+                        {vehicles.map((vehicle) => (
+                          <div key={vehicle.id}>
+                            <RadioGroupItem value={vehicle.id} id={vehicle.id} className="peer sr-only" />
+                            <Label
+                              htmlFor={vehicle.id}
+                              className="flex items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary"
+                            >
+                              <div>
+                                <div className="font-semibold">{vehicle.model}</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {vehicle.type} • License: {vehicle.plate}
+                                </div>
+                              </div>
+                            </Label>
                           </div>
-                        </Label>
+                        ))}
+                      </RadioGroup>
+                      <Button
+                        variant="outline"
+                        className="mt-4 w-full"
+                        onClick={() => setIsAddingVehicle(true)}
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add a New Vehicle
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="vehicle-type">Vehicle Type</Label>
+                        <Input
+                          id="vehicle-type"
+                          placeholder="e.g., Sedan, SUV, Truck"
+                          value={newVehicle.type}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, type: e.target.value })}
+                        />
                       </div>
-                    ))}
-                  </RadioGroup>
-                  <Button variant="outline" className="mt-4 w-full">
-                    Add a New Vehicle
-                  </Button>
+                      <div className="grid gap-2">
+                        <Label htmlFor="vehicle-model">Model</Label>
+                        <Input
+                          id="vehicle-model"
+                          placeholder="e.g., Toyota Camry"
+                          value={newVehicle.model}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="vehicle-plate">License Plate</Label>
+                        <Input
+                          id="vehicle-plate"
+                          placeholder="e.g., ABC123"
+                          value={newVehicle.plate}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, plate: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setIsAddingVehicle(false);
+                            setNewVehicle({ type: "", model: "", plate: "" });
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button className="flex-1" onClick={handleAddVehicle}>
+                          Add Vehicle
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -311,7 +347,7 @@ export default function BookService() {
                   <CardDescription>Any special instructions for your service</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  / <Textarea
+                  <Textarea
                     placeholder="E.g., Please pay extra attention to the stain on the passenger seat"
                     className="min-h-[120px]"
                     value={notes}
@@ -470,9 +506,9 @@ export default function BookService() {
 
                   <div className="rounded-lg border p-3">
                     <h3 className="font-semibold">Vehicle</h3>
-                    <div className="mt-1">{selectedVehicleDetails?.name}</div>
+                    <div className="mt-1">{selectedVehicleDetails?.model}</div>
                     <div className="mt-1 text-sm text-muted-foreground">
-                      {selectedVehicleDetails?.color} • License: {selectedVehicleDetails?.license}
+                      {selectedVehicleDetails?.type} • License: {selectedVehicleDetails?.plate}
                     </div>
                   </div>
 
@@ -526,7 +562,7 @@ export default function BookService() {
             ) : (
               <Button onClick={handleSubmit} disabled={isSubmitting}>
                 {isSubmitting ? "Processing..." : "Confirm Booking"}
-               </Button>
+              </Button>
             )}
           </div>
         </div>

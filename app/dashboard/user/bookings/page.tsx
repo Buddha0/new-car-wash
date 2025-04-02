@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Calendar, Car, Clock, Download, FileText, Filter, Pencil, Search, X } from "lucide-react"
 import { format } from "date-fns"
 import fetchUserAppointments from "@/app/actions/fetch-user-appointments"
+import { toast } from "sonner"
 
 // Sample booking data
 
@@ -89,72 +90,87 @@ import fetchUserAppointments from "@/app/actions/fetch-user-appointments"
 
 export default function BookingHistory() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedBooking, setSelectedBooking] = useState<(typeof bookings)[0] | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<any>(null)
   const [bookings, setBookings] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Function to fetch the bookings
     const fetchBookings = async () => {
       try {
-        setLoading(true) // Start loading
-        const appointments = await fetchUserAppointments() // Fetch appointments
-        setBookings(appointments) // Set the fetched appointments into state
-      } catch (error: any) {
-        // setError(error.message) // Handle any errors
+        setLoading(true)
+        const appointments = await fetchUserAppointments()
+        setBookings(appointments)
+      } catch (error) {
+        console.error('Error fetching bookings:', error)
+        toast.error('Failed to fetch bookings')
       } finally {
-        setLoading(false) // Stop loading after fetch
+        setLoading(false)
       }
     }
 
-    fetchBookings() // Call the function
+    fetchBookings()
   }, [])
 
-  console.log(bookings)
-
-
   const upcomingBookings = bookings
-    .filter((booking) => booking.status === "scheduled" && booking.date > new Date())
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .filter((booking) => {
+      const bookingDate = new Date(booking.date);
+      const now = new Date();
+      // Only show PENDING bookings that are in the future
+      return booking.status === "PENDING" && bookingDate > now;
+    })
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   const pastBookings = bookings
-    .filter(
-      (booking) => booking.status === "completed" || (booking.status === "scheduled" && booking.date <= new Date()),
-    )
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .filter((booking) => {
+      const bookingDate = new Date(booking.date);
+      const now = new Date();
+      // Show COMPLETED bookings or PENDING bookings that are in the past
+      return booking.status === "COMPLETED" || 
+             (booking.status === "PENDING" && bookingDate <= now);
+    })
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const filteredUpcomingBookings = upcomingBookings.filter(
     (booking) =>
-      booking.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.vehicle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.location.toLowerCase().includes(searchQuery.toLowerCase()),
+      booking.service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.vehicle.model.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const filteredPastBookings = pastBookings.filter(
     (booking) =>
-      booking.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.vehicle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.location.toLowerCase().includes(searchQuery.toLowerCase()),
+      booking.service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.vehicle.model.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-  const handleViewDetails = (booking: (typeof bookings)[0]) => {
+  const handleViewDetails = (booking: any) => {
     setSelectedBooking(booking)
   }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
+      case "COMPLETED":
         return <Badge className="bg-green-500">Completed</Badge>
-      case "scheduled":
+      case "PENDING":
         return <Badge>Scheduled</Badge>
-      case "cancelled":
+      case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
   }
 
-  
+  if (loading) {
+    return (
+      <DashboardLayout userRole="user">
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading bookings...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
 
   return (
     <DashboardLayout userRole="user">
@@ -191,10 +207,6 @@ export default function BookingHistory() {
               </Button>
             )}
           </div>
-          <Button variant="outline" className="flex gap-2">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
         </div>
 
         <Tabs defaultValue="upcoming" className="space-y-4">
@@ -235,7 +247,6 @@ export default function BookingHistory() {
                           <TableHead>Service</TableHead>
                           <TableHead>Vehicle</TableHead>
                           <TableHead>Date & Time</TableHead>
-                          <TableHead>Location</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -243,24 +254,15 @@ export default function BookingHistory() {
                       <TableBody>
                         {filteredUpcomingBookings.map((booking) => (
                           <TableRow key={booking.id}>
-                            <TableCell className="font-medium">{booking.service}</TableCell>
-                            <TableCell>{booking.vehicle}</TableCell>
-                            <TableCell>{format(booking.date, "MMM d, yyyy h:mm a")}</TableCell>
-                            <TableCell>{booking.location}</TableCell>
+                            <TableCell className="font-medium">{booking.service.name}</TableCell>
+                            <TableCell>{booking.vehicle.model}</TableCell>
+                            <TableCell>{format(new Date(booking.date), "MMM d, yyyy h:mm a")}</TableCell>
                             <TableCell>{getStatusBadge(booking.status)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button variant="ghost" size="icon" onClick={() => handleViewDetails(booking)}>
                                   <FileText className="h-4 w-4" />
                                   <span className="sr-only">View Details</span>
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <Pencil className="h-4 w-4" />
-                                  <span className="sr-only">Edit</span>
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <X className="h-4 w-4" />
-                                  <span className="sr-only">Cancel</span>
                                 </Button>
                               </div>
                             </TableCell>
@@ -301,7 +303,6 @@ export default function BookingHistory() {
                           <TableHead>Service</TableHead>
                           <TableHead>Vehicle</TableHead>
                           <TableHead>Date & Time</TableHead>
-                          <TableHead>Location</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -309,10 +310,9 @@ export default function BookingHistory() {
                       <TableBody>
                         {filteredPastBookings.map((booking) => (
                           <TableRow key={booking.id}>
-                            <TableCell className="font-medium">{booking.service}</TableCell>
-                            <TableCell>{booking.vehicle}</TableCell>
-                            <TableCell>{format(booking.date, "MMM d, yyyy h:mm a")}</TableCell>
-                            <TableCell>{booking.location}</TableCell>
+                            <TableCell className="font-medium">{booking.service.name}</TableCell>
+                            <TableCell>{booking.vehicle.model}</TableCell>
+                            <TableCell>{format(new Date(booking.date), "MMM d, yyyy h:mm a")}</TableCell>
                             <TableCell>{getStatusBadge(booking.status)}</TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -320,12 +320,6 @@ export default function BookingHistory() {
                                   <FileText className="h-4 w-4" />
                                   <span className="sr-only">View Details</span>
                                 </Button>
-                                {booking.receipt && (
-                                  <Button variant="ghost" size="icon">
-                                    <Download className="h-4 w-4" />
-                                    <span className="sr-only">Download Receipt</span>
-                                  </Button>
-                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -350,19 +344,15 @@ export default function BookingHistory() {
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Service</Label>
-                  <div className="col-span-3 font-medium">{selectedBooking.service}</div>
+                  <div className="col-span-3 font-medium">{selectedBooking.service.name}</div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Vehicle</Label>
-                  <div className="col-span-3">{selectedBooking.vehicle}</div>
+                  <div className="col-span-3">{selectedBooking.vehicle.model}</div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Date & Time</Label>
-                  <div className="col-span-3">{format(selectedBooking.date, "MMMM d, yyyy h:mm a")}</div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Location</Label>
-                  <div className="col-span-3">{selectedBooking.location}</div>
+                  <div className="col-span-3">{format(new Date(selectedBooking.date), "MMMM d, yyyy h:mm a")}</div>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Status</Label>
@@ -370,11 +360,7 @@ export default function BookingHistory() {
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label className="text-right">Price</Label>
-                  <div className="col-span-3">${selectedBooking.price.toFixed(2)}</div>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right">Employee</Label>
-                  <div className="col-span-3">{selectedBooking.employee}</div>
+                  <div className="col-span-3">${Number(selectedBooking.price).toFixed(2)}</div>
                 </div>
                 {selectedBooking.notes && (
                   <div className="grid grid-cols-4 items-center gap-4">
@@ -382,20 +368,9 @@ export default function BookingHistory() {
                     <div className="col-span-3">{selectedBooking.notes}</div>
                   </div>
                 )}
-                {selectedBooking.receipt && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right">Receipt</Label>
-                    <div className="col-span-3">
-                      <Button variant="outline" size="sm" className="gap-2">
-                        <Download className="h-4 w-4" />
-                        {selectedBooking.receipt}
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                {selectedBooking.status === "scheduled" && (
+              <DialogFooter>
+                {selectedBooking.status === "PENDING" && (
                   <>
                     <Button variant="outline" className="sm:w-auto w-full">
                       <Pencil className="mr-2 h-4 w-4" />
@@ -407,7 +382,7 @@ export default function BookingHistory() {
                     </Button>
                   </>
                 )}
-                {selectedBooking.status === "completed" && (
+                {selectedBooking.status === "COMPLETED" && (
                   <Button className="sm:w-auto w-full">
                     <Car className="mr-2 h-4 w-4" />
                     Book Again

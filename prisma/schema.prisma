@@ -23,6 +23,8 @@ model User {
   payments     Payment[]     // Payments made by the user
   reviews      Review[]      // Reviews given by the user for services
   orders       Order[]       // Orders placed by the user in the e-commerce system
+  staff        Staff?        // Staff profile if the user is a staff member
+  staffReviews StaffReview[] // Reviews written by the user
 }
 
 // Service model for car wash (includes the services offered)
@@ -159,13 +161,28 @@ model OrderItem {
 // Staff model (Staff working on appointments for Car Wash)
 model Staff {
   id           String        @id @default(uuid()) // Unique ID for the staff member
-  name         String        // Name of the staff member
-  email        String        @unique // Email of the staff member
-  phone        String?       // Optional phone number for the staff member
+  user         User          @relation(fields: [userId], references: [id]) // Link to User model
+  userId       String        @unique // User ID that this staff member is linked to
   role         String        // Role of the staff member (CLEANER, MANAGER, ADMIN)
+  averageRating Float        @default(0) // Average rating of the staff member
+  totalReviews Int          @default(0) // Total number of reviews received
   createdAt    DateTime      @default(now()) // Timestamp when staff was created
   updatedAt    DateTime      @updatedAt // Last update timestamp
   appointments Appointment[] // Appointments handled by the staff member
+  reviews      StaffReview[] // Reviews received by the staff member
+}
+
+// StaffReview model (Customer reviews for staff members)
+model StaffReview {
+  id        String   @id @default(uuid()) // Unique ID for the review
+  user      User     @relation(fields: [userId], references: [id]) // User who wrote the review
+  userId    String   // User ID
+  staff     Staff    @relation(fields: [staffId], references: [id]) // Staff member being reviewed
+  staffId   String   // Staff ID
+  rating    Int      // Rating given by the user (1-5 stars)
+  comment   String?  // Optional comment for the review
+  createdAt DateTime @default(now()) // Timestamp when the review was created
+  updatedAt DateTime @updatedAt // Last update timestamp
 }
 
 // Review model (Customer reviews for car wash services)

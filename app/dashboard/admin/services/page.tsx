@@ -29,8 +29,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { BarChart, Check, Clock, DollarSign, Edit, MoreHorizontal, Plus, Search, Trash, X, Eye } from 'lucide-react'
 import { toast } from "sonner"
-import CreateService from "@/app/actions/create-service"
-import GetServices from "@/app/actions/get-services"
+import { getServices, createService } from "@/app/actions/services"
 import UpdateService from "@/app/actions/update-service"
 import DeleteService from "@/app/actions/delete-service"
 
@@ -63,17 +62,18 @@ export default function AdminServices() {
 
   // Fetch services on component mount
   useEffect(() => {
-    const fetchServices = async () => {
-      try {
-        const fetchedServices = await GetServices()
-        setServices(fetchedServices)
-      } catch (error) {
-        console.error("Error fetching services:", error)
-        toast.error("Failed to fetch services")
-      }
-    }
-    fetchServices()
+    loadServices()
   }, [])
+
+  const loadServices = async () => {
+    try {
+      const fetchedServices = await getServices()
+      setServices(fetchedServices)
+    } catch (error) {
+      console.error("Error fetching services:", error)
+      toast.error("Failed to fetch services")
+    }
+  }
 
   // Filter services based on search query and filters
   const filteredServices = services.filter((service) => {
@@ -100,7 +100,7 @@ export default function AdminServices() {
       name: service.name,
       description: service.description || "",
       price: service.price,
-      duration: service.duration.toString(),
+      duration: service.duration.replace(' min', ''), // Extract just the number from "45 min"
       features: Array.isArray(service.features) ? service.features : [""],
     })
     setIsEditDialogOpen(true)
@@ -175,33 +175,19 @@ export default function AdminServices() {
         return
       }
 
-      // Validate numeric fields
-      const price = parseFloat(newService.price)
-      const duration = parseInt(newService.duration)
-      
-      if (isNaN(price) || price <= 0) {
-        toast.error("Please enter a valid price")
-        return
-      }
-      if (isNaN(duration) || duration <= 0) {
-        toast.error("Please enter a valid duration")
-        return
-      }
-      
       // Filter out empty features
       const filteredFeatures = newService.features.filter(feature => feature.trim() !== "")
       
-      await CreateService({
+      await createService({
         name: newService.name,
         description: newService.description,
         price: newService.price,
-        duration: duration,
+        duration: newService.duration,
         features: filteredFeatures
       })
 
       // Refresh services after adding a new one
-      const updatedServices = await GetServices()
-      setServices(updatedServices)
+      await loadServices()
 
       toast.success("Service created successfully")
       setIsAddDialogOpen(false)
@@ -229,18 +215,18 @@ export default function AdminServices() {
         toast.error("Service name is required")
         return
       }
-      if (!editService.price.trim()) {
+      if (!editService.price) {
         toast.error("Price is required")
         return
       }
-      if (!editService.duration.trim()) {
+      if (!editService.duration) {
         toast.error("Duration is required")
         return
       }
 
-      // Validate numeric fields
-      const price = parseFloat(editService.price)
-      const duration = parseInt(editService.duration)
+      // Convert price and duration to numbers if they're strings
+      const price = typeof editService.price === 'string' ? parseFloat(editService.price) : editService.price
+      const duration = typeof editService.duration === 'string' ? parseInt(editService.duration) : editService.duration
       
       if (isNaN(price) || price <= 0) {
         toast.error("Please enter a valid price")
@@ -258,14 +244,13 @@ export default function AdminServices() {
         id: selectedService.id,
         name: editService.name,
         description: editService.description,
-        price: editService.price,
+        price: String(price),
         duration: duration,
         features: filteredFeatures
       })
 
       // Refresh services after updating
-      const updatedServices = await GetServices()
-      setServices(updatedServices)
+      await loadServices()
 
       toast.success("Service updated successfully")
       setIsEditDialogOpen(false)
@@ -284,8 +269,7 @@ export default function AdminServices() {
       await DeleteService(serviceId)
       
       // Refresh services after deleting
-      const updatedServices = await GetServices()
-      setServices(updatedServices)
+      await loadServices()
 
       toast.success("Service deleted successfully")
       setIsEditDialogOpen(false)

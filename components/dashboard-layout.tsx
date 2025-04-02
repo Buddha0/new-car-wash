@@ -24,7 +24,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -61,11 +60,9 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
   const adminNavItems = [
     { title: "Dashboard", href: "/dashboard/admin", icon: Home },
     { title: "Bookings", href: "/dashboard/admin/bookings", icon: Calendar },
-    { title: "Customers", href: "/dashboard/admin/customers", icon: Users },
-    { title: "Employees", href: "/dashboard/admin/employees", icon: User },
+    { title: "Users", href: "/dashboard/admin/users", icon: Users },
     { title: "Services", href: "/dashboard/admin/services", icon: Car },
-    { title: "Reports", href: "/dashboard/admin/reports", icon: BarChart3 },
-    { title: "Settings", href: "/dashboard/admin/settings", icon: Settings },
+    
   ]
 
   const userNavItems = [
@@ -107,10 +104,10 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="xl:hidden">
+            <div className="flex items-center justify-center h-9 w-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground xl:hidden cursor-pointer">
               <Menu className="h-5 w-5" />
               <span className="sr-only">Toggle navigation menu</span>
-            </Button>
+            </div>
           </SheetTrigger>
           <SheetContent side="left" className="w-72 sm:max-w-none">
             <div className="flex h-16 items-center border-b px-6">
@@ -118,10 +115,9 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
                 <Car className="h-6 w-6 text-primary" />
                 <span>SparkleWash</span>
               </Link>
-              <Button variant="outline" size="icon" className="ml-auto">
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close navigation menu</span>
-              </Button>
+              <div className="ml-auto">
+                <X className="h-5 w-5 text-muted-foreground" />
+              </div>
             </div>
             <nav className="grid gap-2 p-4 text-lg font-medium">
               {navItems.map((item) => (
@@ -217,7 +213,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
             )}
             <span className="sr-only">Toggle notifications</span>
           </Button>
-    
+     
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 export default function HeroSection() {
   return (
-    <section className="relative pl-10">
+    <section className="relative px-6">
           <div className="absolute inset-0 z-0">
             <Image
               src="https://images.unsplash.com/photo-1575844611398-2a68400b437c?q=80&w=1472&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"

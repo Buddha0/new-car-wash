@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,268 +20,234 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-// Import the Eye icon if it's not already imported
 import { Check, Download, Edit, Plus, Search, X, Eye, CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
+import { format, parse } from "date-fns"
 import { cn } from "@/lib/utils"
+import { PrismaClient } from "@prisma/client"
+import { getBookings } from '@/app/actions/bookings';
+import { getServices } from '@/app/actions/services';
+import { updateAppointment } from '@/app/actions/appointments';
+import { getStaff } from '@/app/actions/staff';
+import { toast } from "sonner"
 
-// Sample booking data
-const bookings = [
-  {
-    id: "B001",
-    customer: {
-      id: "C001",
-      name: "James Wilson",
-      email: "james.wilson@example.com",
-      phone: "555-123-4567",
-    },
-    service: "Premium Wash",
-    vehicle: "BMW X5 (Black)",
-    date: new Date(2023, 5, 20, 10, 30),
-    status: "in-progress",
-    price: 49.99,
-    employee: {
-      id: "E001",
-      name: "Mike Johnson",
-    },
-    location: "Downtown Branch",
-    notes: "Customer requested extra attention to wheels",
-    paymentStatus: "paid",
-    paymentMethod: "credit-card",
-  },
-  {
-    id: "B002",
-    customer: {
-      id: "C002",
-      name: "Emily Brown",
-      email: "emily.brown@example.com",
-      phone: "555-987-6543",
-    },
-    service: "Full Detail",
-    vehicle: "Tesla Model 3 (White)",
-    date: new Date(2023, 5, 20, 13, 15),
-    status: "scheduled",
-    price: 129.99,
-    employee: {
-      id: "E002",
-      name: "Lisa Smith",
-    },
-    location: "Downtown Branch",
-    notes: "",
-    paymentStatus: "pending",
-    paymentMethod: "pay-later",
-  },
-  {
-    id: "B003",
-    customer: {
-      id: "C003",
-      name: "Robert Davis",
-      email: "robert.davis@example.com",
-      phone: "555-456-7890",
-    },
-    service: "Basic Wash",
-    vehicle: "Honda Civic (Blue)",
-    date: new Date(2023, 5, 20, 15, 0),
-    status: "scheduled",
-    price: 24.99,
-    employee: {
-      id: "E003",
-      name: "John Miller",
-    },
-    location: "Westside Branch",
-    notes: "",
-    paymentStatus: "pending",
-    paymentMethod: "pay-later",
-  },
-  {
-    id: "B004",
-    customer: {
-      id: "C004",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@example.com",
-      phone: "555-789-0123",
-    },
-    service: "Interior Clean",
-    vehicle: "Toyota Camry (Silver)",
-    date: new Date(2023, 5, 21, 9, 0),
-    status: "scheduled",
-    price: 39.99,
-    employee: {
-      id: "E001",
-      name: "Mike Johnson",
-    },
-    location: "Downtown Branch",
-    notes: "",
-    paymentStatus: "paid",
-    paymentMethod: "credit-card",
-  },
-  {
-    id: "B005",
-    customer: {
-      id: "C005",
-      name: "Michael Thompson",
-      email: "michael.thompson@example.com",
-      phone: "555-321-6547",
-    },
-    service: "Deluxe Wash",
-    vehicle: "Audi Q7 (Gray)",
-    date: new Date(2023, 5, 21, 11, 30),
-    status: "scheduled",
-    price: 69.99,
-    employee: {
-      id: "E002",
-      name: "Lisa Smith",
-    },
-    location: "Eastside Branch",
-    notes: "",
-    paymentStatus: "pending",
-    paymentMethod: "pay-later",
-  },
-  {
-    id: "B006",
-    customer: {
-      id: "C001",
-      name: "James Wilson",
-      email: "james.wilson@example.com",
-      phone: "555-123-4567",
-    },
-    service: "Basic Wash",
-    vehicle: "BMW X5 (Black)",
-    date: new Date(2023, 5, 19, 14, 0),
-    status: "completed",
-    price: 24.99,
-    employee: {
-      id: "E003",
-      name: "John Miller",
-    },
-    location: "Downtown Branch",
-    notes: "",
-    paymentStatus: "paid",
-    paymentMethod: "credit-card",
-  },
-  {
-    id: "B007",
-    customer: {
-      id: "C003",
-      name: "Robert Davis",
-      email: "robert.davis@example.com",
-      phone: "555-456-7890",
-    },
-    service: "Premium Wash",
-    vehicle: "Honda Civic (Blue)",
-    date: new Date(2023, 5, 18, 10, 30),
-    status: "completed",
-    price: 49.99,
-    employee: {
-      id: "E001",
-      name: "Mike Johnson",
-    },
-    location: "Westside Branch",
-    notes: "",
-    paymentStatus: "paid",
-    paymentMethod: "credit-card",
-  },
-  {
-    id: "B008",
-    customer: {
-      id: "C002",
-      name: "Emily Brown",
-      email: "emily.brown@example.com",
-      phone: "555-987-6543",
-    },
-    service: "Interior Clean",
-    vehicle: "Tesla Model 3 (White)",
-    date: new Date(2023, 5, 17, 15, 45),
-    status: "completed",
-    price: 39.99,
-    employee: {
-      id: "E002",
-      name: "Lisa Smith",
-    },
-    location: "Downtown Branch",
-    notes: "",
-    paymentStatus: "paid",
-    paymentMethod: "credit-card",
-  },
-]
-
-// Sample employees for assignment
-const employees = [
-  { id: "E001", name: "Mike Johnson" },
-  { id: "E002", name: "Lisa Smith" },
-  { id: "E003", name: "John Miller" },
-  { id: "E004", name: "Sarah Williams" },
-  { id: "E005", name: "David Brown" },
-]
+const prisma = new PrismaClient();
 
 // Sample locations
 const locations = ["All Locations", "Downtown Branch", "Westside Branch", "Eastside Branch", "Northside Branch"]
 
-// Sample services
-const services = ["All Services", "Basic Wash", "Premium Wash", "Deluxe Wash", "Interior Clean", "Full Detail"]
+// Add this helper function at the top of the file after imports
+const formatTimeSlot = (timeSlot: string | undefined) => {
+  if (!timeSlot) return '';
+  try {
+    // If timeSlot is already in HH:mm format, return formatted
+    if (timeSlot.match(/^\d{2}:\d{2}$/)) {
+      return format(parse(timeSlot, 'HH:mm', new Date()), 'h:mm a');
+    }
+    // If timeSlot is already in AM/PM format, return as is
+    return timeSlot;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    return timeSlot || '';
+  }
+};
+
+// Add this interface after imports
+interface Booking {
+  id: string;
+  service: {
+    id: string;
+    name: string;
+    price: number;
+  };
+  vehicle: {
+    id: string;
+    model: string;
+  };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  date: Date;
+  timeSlot: string;
+  notes?: string;
+  status: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  location?: string;
+  updatedAt: Date;
+  staff?: {
+    id: string;
+    name: string;
+  } | null;
+  price: number;
+}
 
 export default function AdminBookings() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedBooking, setSelectedBooking] = useState<(typeof bookings)[0] | null>(null)
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const [bookingToEdit, setBookingToEdit] = useState<Booking | null>(null)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [filterLocation, setFilterLocation] = useState("All Locations")
   const [filterService, setFilterService] = useState("All Services")
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined)
   const [filterStatus, setFilterStatus] = useState("all")
+  const [bookings, setBookings] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+  const [staff, setStaff] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('Fetching data...');
+        const [bookingsData, servicesData, staffData] = await Promise.all([
+          getBookings(),
+          getServices(),
+          getStaff()
+        ]);
+        
+        console.log('Raw bookings data:', bookingsData);
+        console.log('Raw staff data:', staffData);
+        
+        // Transform the appointments data to match the Booking interface
+        const transformedBookings = bookingsData.map(booking => {
+          console.log('Processing booking:', booking);
+          return {
+            id: booking.id,
+            service: {
+              id: booking.service.id,
+              name: booking.service.name,
+              price: booking.service.price
+            },
+            vehicle: {
+              id: booking.vehicle.id,
+              model: booking.vehicle.model
+            },
+            user: {
+              id: booking.user.id,
+              name: booking.user.name,
+              email: booking.user.email,
+              phone: booking.user.phone
+            },
+            date: booking.date,
+            timeSlot: booking.timeSlot,
+            notes: booking.notes,
+            status: booking.status,
+            paymentStatus: booking.paymentStatus,
+            paymentMethod: booking.paymentMethod,
+            updatedAt: booking.updatedAt,
+            staff: booking.staff ? {
+              id: booking.staff.id,
+              name: staffData.find(s => s.id === booking.staff?.id)?.user.name || 'Unknown'
+            } : null,
+            price: booking.price
+          };
+        });
+
+        console.log('Transformed bookings:', transformedBookings);
+        
+        setBookings(transformedBookings);
+        setServices(servicesData);
+        setStaff(staffData);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error loading data:', error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Filter bookings based on search query and filters
   const filteredBookings = bookings.filter((booking) => {
     // Search query filter
     const matchesSearch =
-      booking.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       booking.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
+      booking.vehicle.model.toLowerCase().includes(searchQuery.toLowerCase())
 
     // Location filter
     const matchesLocation = filterLocation === "All Locations" || booking.location === filterLocation
 
     // Service filter
-    const matchesService = filterService === "All Services" || booking.service === filterService
+    const matchesService = filterService === "All Services" || booking.service.name === filterService
 
     // Date filter
     const matchesDate =
       !filterDate ||
-      (booking.date.getDate() === filterDate.getDate() &&
-        booking.date.getMonth() === filterDate.getMonth() &&
-        booking.date.getFullYear() === filterDate.getFullYear())
+      (new Date(booking.date).getDate() === filterDate.getDate() &&
+        new Date(booking.date).getMonth() === filterDate.getMonth() &&
+        new Date(booking.date).getFullYear() === filterDate.getFullYear())
 
     // Status filter
     const matchesStatus =
       filterStatus === "all" ||
-      (filterStatus === "active" && (booking.status === "scheduled" || booking.status === "in-progress")) ||
-      (filterStatus === "completed" && booking.status === "completed") ||
-      (filterStatus === "cancelled" && booking.status === "cancelled")
+      (filterStatus === "active" && (booking.status === "PENDING" || booking.status === "IN_PROGRESS")) ||
+      (filterStatus === "completed" && booking.status === "COMPLETED") ||
+      (filterStatus === "cancelled" && booking.status === "CANCELLED")
 
     return matchesSearch && matchesLocation && matchesService && matchesDate && matchesStatus
   })
 
+  console.log('Filtered bookings:', filteredBookings);
+
   // Sort bookings by date (most recent first)
-  const sortedBookings = [...filteredBookings].sort((a, b) => b.date.getTime() - a.date.getTime())
+  const sortedBookings = [...filteredBookings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-  const handleViewDetails = (booking: (typeof bookings)[0]) => {
-    setSelectedBooking(booking)
+  const handleViewDetails = (booking: any) => {
+    const bookingData = {
+      ...booking,
+      price: booking.price ? Number(booking.price) : 0
+    };
+    setSelectedBooking(bookingData);
   }
 
-  const handleEditBooking = (booking: (typeof bookings)[0]) => {
-    setSelectedBooking(booking)
-    setIsEditDialogOpen(true)
-  }
+  const handleEditBooking = (booking: any) => {
+    // Create a new object with all the necessary data
+    const bookingData = {
+      ...booking,
+      service: {
+        id: booking.service?.id || '',
+        name: booking.service?.name || '',
+        description: booking.service?.description || '',
+        price: booking.service?.price || 0,
+        duration: booking.service?.duration || 0
+      },
+      vehicle: {
+        id: booking.vehicle?.id || '',
+        type: booking.vehicle?.type || '',
+        model: booking.vehicle?.model || '',
+        plate: booking.vehicle?.plate || ''
+      },
+      timeSlot: booking.timeSlot || '',
+      notes: booking.notes || '',
+      date: booking.date || new Date(),
+      price: booking.price ? Number(booking.price) : 0,
+      status: booking.status || 'PENDING',
+      paymentStatus: booking.paymentStatus || 'PENDING',
+      paymentMethod: booking.paymentMethod || '',
+      staff: booking.staff || null
+    };
+    
+    console.log('Editing booking:', bookingData); // Add this for debugging
+    setBookingToEdit(bookingData);
+    setIsEditDialogOpen(true);
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
+      case "COMPLETED":
         return <Badge className="bg-green-500">Completed</Badge>
-      case "scheduled":
+      case "PENDING":
         return <Badge>Scheduled</Badge>
-      case "in-progress":
+      case "IN_PROGRESS":
         return <Badge className="bg-yellow-500">In Progress</Badge>
-      case "cancelled":
+      case "CANCELLED":
         return <Badge variant="destructive">Cancelled</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
@@ -290,11 +256,11 @@ export default function AdminBookings() {
 
   const getPaymentStatusBadge = (status: string) => {
     switch (status) {
-      case "paid":
+      case "SUCCESS":
         return <Badge className="bg-green-500">Paid</Badge>
-      case "pending":
+      case "PENDING":
         return <Badge variant="outline">Pending</Badge>
-      case "refunded":
+      case "REFUNDED":
         return <Badge variant="secondary">Refunded</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
@@ -306,6 +272,103 @@ export default function AdminBookings() {
     setFilterService("All Services")
     setFilterDate(undefined)
     setFilterStatus("all")
+  }
+
+  // Add the save handler function
+  const handleSaveChanges = async () => {
+    try {
+      if (!bookingToEdit) return;
+      setIsSaving(true);
+
+      const updatedBooking = await updateAppointment(bookingToEdit.id, {
+        serviceId: bookingToEdit.service?.id,
+        vehicleId: bookingToEdit.vehicle?.id,
+        date: new Date(bookingToEdit.date),
+        timeSlot: bookingToEdit.timeSlot,
+        notes: bookingToEdit.notes,
+        status: bookingToEdit.status,
+        staffId: bookingToEdit.staff?.id || null,
+        paymentStatus: bookingToEdit.paymentStatus
+      });
+
+      // Update the bookings list with the new data
+      setBookings(prevBookings => 
+        prevBookings.map(booking => {
+          if (booking.id === updatedBooking.id) {
+            return {
+              ...booking,
+              ...updatedBooking,
+              staff: updatedBooking.staff ? {
+                id: updatedBooking.staff.id,
+                name: staff.find(s => s.id === updatedBooking.staff?.id)?.user.name || 'Unknown'
+              } : null
+            };
+          }
+          return booking;
+        })
+      );
+
+      toast.success("Booking updated successfully");
+      setIsEditDialogOpen(false);
+      setBookingToEdit(null);
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      toast.error("Failed to update booking");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Update the state setters with proper typing
+  const handleServiceChange = (value: string) => {
+    const selectedService = services.find(s => s.id === value);
+    setBookingToEdit((prev: Booking | null) => prev ? ({
+      ...prev,
+      service: selectedService
+    }) : null);
+  };
+
+  // Update other setters similarly
+  const handleVehicleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBookingToEdit((prev: Booking | null) => prev ? ({
+      ...prev,
+      vehicle: { ...prev.vehicle, model: e.target.value }
+    }) : null);
+  };
+
+  const handleDateChange = (date: Date | undefined) => {
+    if (!date) return;
+    setBookingToEdit((prev: Booking | null) => prev ? ({ ...prev, date }) : null);
+  };
+
+  const handleTimeChange = (value: string) => {
+    setBookingToEdit((prev: Booking | null) => prev ? ({ ...prev, timeSlot: value }) : null);
+  };
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setBookingToEdit((prev: Booking | null) => prev ? ({ ...prev, notes: e.target.value }) : null);
+  };
+
+  // Update the staff selection handler
+  const handleStaffChange = (value: string) => {
+    const selectedStaff = staff.find(s => s.id === value);
+    setBookingToEdit(prev => prev ? ({
+      ...prev,
+      staff: selectedStaff ? {
+        id: selectedStaff.id,
+        name: selectedStaff.user.name
+      } : null
+    }) : null);
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout userRole="admin">
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -350,9 +413,10 @@ export default function AdminBookings() {
                       <SelectValue placeholder="Select service" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="All Services">All Services</SelectItem>
                       {services.map((service) => (
-                        <SelectItem key={service} value={service}>
-                          {service}
+                        <SelectItem key={service.id} value={service.name}>
+                          {service.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -438,7 +502,6 @@ export default function AdminBookings() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Booking ID</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Service</TableHead>
                         <TableHead>Date & Time</TableHead>
@@ -451,20 +514,19 @@ export default function AdminBookings() {
                     <TableBody>
                       {sortedBookings.map((booking) => (
                         <TableRow key={booking.id}>
-                          <TableCell className="font-medium">{booking.id}</TableCell>
                           <TableCell>
-                            <div className="font-medium">{booking.customer.name}</div>
-                            <div className="text-sm text-muted-foreground">{booking.customer.email}</div>
+                            <div className="font-medium">{booking.user.name}</div>
+                            <div className="text-sm text-muted-foreground">{booking.user.email}</div>
                           </TableCell>
                           <TableCell>
-                            <div>{booking.service}</div>
-                            <div className="text-sm text-muted-foreground">{booking.vehicle}</div>
+                            <div>{booking.service.name}</div>
+                            <div className="text-sm text-muted-foreground">{booking.vehicle.model}</div>
                           </TableCell>
                           <TableCell>
-                            <div>{format(booking.date, "MMM d, yyyy")}</div>
-                            <div className="text-sm text-muted-foreground">{format(booking.date, "h:mm a")}</div>
+                            <div>{format(new Date(booking.date), "MMM d, yyyy")}</div>
+                            <div className="text-sm text-muted-foreground">{format(new Date(booking.date), "h:mm a")}</div>
                           </TableCell>
-                          <TableCell>{booking.employee.name}</TableCell>
+                          <TableCell>{booking.staff?.name || "Unassigned"}</TableCell>
                           <TableCell>{getStatusBadge(booking.status)}</TableCell>
                           <TableCell>{getPaymentStatusBadge(booking.paymentStatus)}</TableCell>
                           <TableCell className="text-right">
@@ -483,7 +545,7 @@ export default function AdminBookings() {
                                 <Edit className="h-4 w-4" />
                                 <span className="sr-only">Edit</span>
                               </div>
-                              {booking.status === "completed" && (
+                              {booking.status === "COMPLETED" && (
                                 <div className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
                                   <Download className="h-4 w-4" />
                                   <span className="sr-only">Download</span>
@@ -515,13 +577,13 @@ export default function AdminBookings() {
                     <h3 className="font-semibold mb-2">Customer Information</h3>
                     <div className="space-y-1">
                       <div className="text-sm">
-                        <span className="font-medium">Name:</span> {selectedBooking.customer.name}
+                        <span className="font-medium">Name:</span> {selectedBooking.user.name}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Email:</span> {selectedBooking.customer.email}
+                        <span className="font-medium">Email:</span> {selectedBooking.user.email}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Phone:</span> {selectedBooking.customer.phone}
+                        <span className="font-medium">Phone:</span> {selectedBooking.user.phone}
                       </div>
                     </div>
                   </div>
@@ -530,16 +592,16 @@ export default function AdminBookings() {
                     <h3 className="font-semibold mb-2">Booking Information</h3>
                     <div className="space-y-1">
                       <div className="text-sm">
-                        <span className="font-medium">Service:</span> {selectedBooking.service}
+                        <span className="font-medium">Service:</span> {selectedBooking.service.name}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Vehicle:</span> {selectedBooking.vehicle}
+                        <span className="font-medium">Vehicle:</span> {selectedBooking.vehicle.model}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Date:</span> {format(selectedBooking.date, "MMMM d, yyyy")}
+                        <span className="font-medium">Date:</span> {format(new Date(selectedBooking.date), "MMMM d, yyyy")}
                       </div>
                       <div className="text-sm">
-                        <span className="font-medium">Time:</span> {format(selectedBooking.date, "h:mm a")}
+                        <span className="font-medium">Time:</span> {format(new Date(selectedBooking.date), "h:mm a")}
                       </div>
                     </div>
                   </div>
@@ -550,7 +612,7 @@ export default function AdminBookings() {
                     <h3 className="font-semibold mb-2">Assignment</h3>
                     <div className="space-y-1">
                       <div className="text-sm">
-                        <span className="font-medium">Employee:</span> {selectedBooking.employee.name}
+                        <span className="font-medium">Employee:</span> {selectedBooking.staff?.name || "Unassigned"}
                       </div>
                       <div className="text-sm">
                         <span className="font-medium">Location:</span> {selectedBooking.location}
@@ -562,7 +624,7 @@ export default function AdminBookings() {
                     <h3 className="font-semibold mb-2">Payment</h3>
                     <div className="space-y-1">
                       <div className="text-sm">
-                        <span className="font-medium">Amount:</span> ${selectedBooking.price.toFixed(2)}
+                        <span className="font-medium">Amount:</span> ${typeof selectedBooking?.price === 'number' ? selectedBooking.price.toFixed(2) : '0.00'}
                       </div>
                       <div className="text-sm">
                         <span className="font-medium">Status:</span>{" "}
@@ -570,7 +632,7 @@ export default function AdminBookings() {
                       </div>
                       <div className="text-sm">
                         <span className="font-medium">Method:</span>{" "}
-                        {selectedBooking.paymentMethod === "credit-card" ? "Credit Card" : "Pay at Location"}
+                        {selectedBooking?.paymentMethod}
                       </div>
                     </div>
                   </div>
@@ -588,7 +650,7 @@ export default function AdminBookings() {
                   <div className="flex items-center gap-2">
                     {getStatusBadge(selectedBooking.status)}
                     <span className="text-sm text-muted-foreground">
-                      Last updated: {format(new Date(), "MMM d, yyyy h:mm a")}
+                      Last updated: {format(new Date(selectedBooking.updatedAt), "MMM d, yyyy h:mm a")}
                     </span>
                   </div>
                 </div>
@@ -598,25 +660,25 @@ export default function AdminBookings() {
                   <Edit className="mr-2 h-4 w-4" />
                   Edit Booking
                 </Button>
-                {selectedBooking.status === "scheduled" && (
+                {selectedBooking.status === "PENDING" && (
                   <Button>
                     <Check className="mr-2 h-4 w-4" />
                     Mark as In Progress
                   </Button>
                 )}
-                {selectedBooking.status === "in-progress" && (
+                {selectedBooking.status === "IN_PROGRESS" && (
                   <Button>
                     <Check className="mr-2 h-4 w-4" />
                     Mark as Completed
                   </Button>
                 )}
-                {(selectedBooking.status === "scheduled" || selectedBooking.status === "in-progress") && (
+                {(selectedBooking.status === "PENDING" || selectedBooking.status === "IN_PROGRESS") && (
                   <Button variant="destructive">
                     <X className="mr-2 h-4 w-4" />
                     Cancel Booking
                   </Button>
                 )}
-                {selectedBooking.status === "completed" && (
+                {selectedBooking.status === "COMPLETED" && (
                   <Button>
                     <Download className="mr-2 h-4 w-4" />
                     Download Invoice
@@ -628,17 +690,17 @@ export default function AdminBookings() {
         )}
 
         {/* Edit Booking Dialog */}
-        {selectedBooking && isEditDialogOpen && (
+        {bookingToEdit && isEditDialogOpen && (
           <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
             setIsEditDialogOpen(open);
             if (!open) {
-              setSelectedBooking(null);
+              setBookingToEdit(null);
             }
           }}>
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>Edit Booking</DialogTitle>
-                <DialogDescription>Update booking #{selectedBooking.id} details</DialogDescription>
+                <DialogDescription>Update booking #{bookingToEdit.id} details</DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <Tabs defaultValue="details" className="w-full">
@@ -652,23 +714,32 @@ export default function AdminBookings() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="edit-service">Service</Label>
-                        <Select defaultValue={selectedBooking.service}>
+                        <Select 
+                          value={bookingToEdit?.service?.id || ''} 
+                          onValueChange={handleServiceChange}
+                        >
                           <SelectTrigger id="edit-service" className="w-full">
-                            <SelectValue placeholder="Select service" />
+                            <SelectValue placeholder="Select service">
+                              {bookingToEdit?.service?.name}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Basic Wash">Basic Wash</SelectItem>
-                            <SelectItem value="Premium Wash">Premium Wash</SelectItem>
-                            <SelectItem value="Deluxe Wash">Deluxe Wash</SelectItem>
-                            <SelectItem value="Interior Clean">Interior Clean</SelectItem>
-                            <SelectItem value="Full Detail">Full Detail</SelectItem>
+                            {services.map((service) => (
+                              <SelectItem key={service.id} value={service.id}>
+                                {service.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="grid gap-2">
                         <Label htmlFor="edit-vehicle">Vehicle</Label>
-                        <Input id="edit-vehicle" defaultValue={selectedBooking.vehicle} />
+                        <Input 
+                          id="edit-vehicle" 
+                          value={bookingToEdit?.vehicle?.model || ''} 
+                          onChange={handleVehicleChange}
+                        />
                       </div>
                     </div>
 
@@ -683,39 +754,41 @@ export default function AdminBookings() {
                               className="w-full justify-start text-left font-normal"
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
-                              {format(selectedBooking.date, "PPP")}
+                              {bookingToEdit?.date ? format(new Date(bookingToEdit.date), "PPP") : "Pick a date"}
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar mode="single" selected={selectedBooking.date} initialFocus />
+                            <Calendar 
+                              mode="single" 
+                              selected={bookingToEdit?.date ? new Date(bookingToEdit.date) : undefined} 
+                              onSelect={handleDateChange}
+                              initialFocus 
+                            />
                           </PopoverContent>
                         </Popover>
                       </div>
 
                       <div className="grid gap-2">
                         <Label htmlFor="edit-time">Time</Label>
-                        <Select defaultValue={format(selectedBooking.date, "HH:mm")}>
+                        <Select 
+                          value={bookingToEdit?.timeSlot || ''}
+                          onValueChange={handleTimeChange}
+                        >
                           <SelectTrigger id="edit-time" className="w-full">
-                            <SelectValue placeholder="Select time" />
+                            <SelectValue placeholder="Select time">
+                              {formatTimeSlot(bookingToEdit?.timeSlot)}
+                            </SelectValue>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="09:00">9:00 AM</SelectItem>
-                            <SelectItem value="09:30">9:30 AM</SelectItem>
-                            <SelectItem value="10:00">10:00 AM</SelectItem>
-                            <SelectItem value="10:30">10:30 AM</SelectItem>
-                            <SelectItem value="11:00">11:00 AM</SelectItem>
-                            <SelectItem value="11:30">11:30 AM</SelectItem>
-                            <SelectItem value="12:00">12:00 PM</SelectItem>
-                            <SelectItem value="12:30">12:30 PM</SelectItem>
-                            <SelectItem value="13:00">1:00 PM</SelectItem>
-                            <SelectItem value="13:30">1:30 PM</SelectItem>
-                            <SelectItem value="14:00">2:00 PM</SelectItem>
-                            <SelectItem value="14:30">2:30 PM</SelectItem>
-                            <SelectItem value="15:00">3:00 PM</SelectItem>
-                            <SelectItem value="15:30">3:30 PM</SelectItem>
-                            <SelectItem value="16:00">4:00 PM</SelectItem>
-                            <SelectItem value="16:30">4:30 PM</SelectItem>
-                            <SelectItem value="17:00">5:00 PM</SelectItem>
+                            {[
+                              "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+                              "12:00", "12:30", "13:00", "13:30", "14:00", "14:30",
+                              "15:00", "15:30", "16:00", "16:30", "17:00"
+                            ].map((time) => (
+                              <SelectItem key={time} value={time}>
+                                {format(parse(time, 'HH:mm', new Date()), 'h:mm a')}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -723,7 +796,16 @@ export default function AdminBookings() {
 
                     <div className="grid gap-2">
                       <Label htmlFor="edit-notes">Notes</Label>
-                      <Input id="edit-notes" defaultValue={selectedBooking.notes} />
+                      <Input 
+                        id="edit-notes" 
+                        value={bookingToEdit?.notes || ''} 
+                        onChange={handleNotesChange}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-4 items-center gap-4">
+                      <Label className="text-right">Price</Label>
+                      <div className="col-span-3">${typeof bookingToEdit?.price === 'number' ? bookingToEdit.price.toFixed(2) : '0.00'}</div>
                     </div>
                   </TabsContent>
 
@@ -731,34 +813,19 @@ export default function AdminBookings() {
                     <div className="grid grid-cols-2 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="edit-employee">Assigned Employee</Label>
-                        <Select defaultValue={selectedBooking.employee.id}>
+                        <Select 
+                          value={bookingToEdit.staff?.id || ''}
+                          onValueChange={handleStaffChange}
+                        >
                           <SelectTrigger id="edit-employee" className="w-full">
                             <SelectValue placeholder="Select employee" />
                           </SelectTrigger>
                           <SelectContent>
-                            {employees.map((employee) => (
+                            {staff.map((employee) => (
                               <SelectItem key={employee.id} value={employee.id}>
-                                {employee.name}
+                                {employee.user.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="grid gap-2">
-                        <Label htmlFor="edit-location">Location</Label>
-                        <Select defaultValue={selectedBooking.location}>
-                          <SelectTrigger id="edit-location" className="w-full">
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {locations
-                              .filter((loc) => loc !== "All Locations")
-                              .map((location) => (
-                                <SelectItem key={location} value={location}>
-                                  {location}
-                                </SelectItem>
-                              ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -768,29 +835,29 @@ export default function AdminBookings() {
                   <TabsContent value="status" className="space-y-4 mt-4">
                     <div className="grid gap-2">
                       <Label htmlFor="edit-status">Booking Status</Label>
-                      <Select defaultValue={selectedBooking.status}>
+                      <Select defaultValue={bookingToEdit.status}>
                         <SelectTrigger id="edit-status" className="w-full">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="scheduled">Scheduled</SelectItem>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="PENDING">Scheduled</SelectItem>
+                          <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                          <SelectItem value="COMPLETED">Completed</SelectItem>
+                          <SelectItem value="CANCELLED">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="grid gap-2">
                       <Label htmlFor="edit-payment-status">Payment Status</Label>
-                      <Select defaultValue={selectedBooking.paymentStatus}>
+                      <Select defaultValue={bookingToEdit.paymentStatus}>
                         <SelectTrigger id="edit-payment-status" className="w-full">
                           <SelectValue placeholder="Select payment status" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="refunded">Refunded</SelectItem>
+                          <SelectItem value="PENDING">Pending</SelectItem>
+                          <SelectItem value="SUCCESS">Paid</SelectItem>
+                          <SelectItem value="REFUNDED">Refunded</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -798,10 +865,19 @@ export default function AdminBookings() {
                 </Tabs>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSaving}>
                   Cancel
                 </Button>
-                <Button>Save Changes</Button>
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                  {isSaving ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Saving...
+                    </div>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
