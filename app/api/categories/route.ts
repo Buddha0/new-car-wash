@@ -1,41 +1,69 @@
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
 
 export async function GET() {
   try {
-    // Fetch categories from the database
-    const categories = await db.category.findMany({
+    const categories = await prisma.category.findMany({
       orderBy: {
-        name: "asc",
+        name: 'asc',
       },
     });
-
     return NextResponse.json(categories);
   } catch (error) {
-    console.log("[CATEGORIES_GET]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch categories" },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const body = await request.json();
     const { name } = body;
 
     if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
+      return NextResponse.json(
+        { error: "Name is required" },
+        { status: 400 }
+      );
     }
 
-    // Create a new category in the database
-    const newCategory = await db.category.create({
-      data: {
-        name,
-      },
+    const category = await prisma.category.create({
+      data: { name },
     });
 
-    return NextResponse.json(newCategory);
+    return NextResponse.json(category);
   } catch (error) {
-    console.log("[CATEGORIES_POST]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create category" },
+      { status: 500 }
+    );
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, name } = body;
+
+    if (!id || !name) {
+      return NextResponse.json(
+        { error: "ID and name are required" },
+        { status: 400 }
+      );
+    }
+
+    const category = await prisma.category.update({
+      where: { id },
+      data: { name },
+    });
+
+    return NextResponse.json(category);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to update category" },
+      { status: 500 }
+    );
+  }
+} 

@@ -37,6 +37,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { CartIcon } from "@/components/cart-icon";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -181,6 +182,7 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
           <span className="hidden xl:inline-block">SparkleWash</span>
         </Link>
         <div className="ml-auto flex items-center gap-4">
+          {userRole === "user" && <CartIcon />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="hidden md:flex">

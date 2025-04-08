@@ -1,67 +1,43 @@
-// app/api/products/route.ts
-
 import { NextResponse } from "next/server";
-import db from "@/lib/db";
+import prisma from "@/lib/db";
 
-export async function POST(req: Request) {
+export async function GET() {
   try {
-    const body = await req.json();
+    const products = await prisma.product.findMany({
+      include: {
+        category: true,
+      },
+    });
+    return NextResponse.json(products);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Failed to fetch products" },
+      { status: 500 }
+    );
+  }
+}
 
-    const { name, description, price, categoryId, stock, images } = body;
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { name, description, price, stock, categoryId, images } = body;
 
-    if (!name) {
-      return new NextResponse("Name is required", { status: 400 });
-    }
-
-    if (!price) {
-      return new NextResponse("Price is required", { status: 400 });
-    }
-
-    if (!categoryId) {
-      return new NextResponse("Category ID is required", { status: 400 });
-    }
-
-    if (!images || !images.length) {
-      return new NextResponse("At least one image is required", {
-        status: 400,
-      });
-    }
-
-    const product = await db.product.create({
+    const product = await prisma.product.create({
       data: {
         name,
         description,
         price,
+        stock,
         categoryId,
-        stock: stock || 0,
         images,
-      },
-      include: {
-        category: true, // Include the category data in the response
       },
     });
 
     return NextResponse.json(product);
   } catch (error) {
-    console.log("[PRODUCT_POST]", error);
-    return new NextResponse("Internal error", { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create product" },
+      { status: 500 }
+    );
   }
-}
-
-export async function GET() {
-  try {
-    const products = await db.product.findMany({
-      include: {
-        category: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return NextResponse.json(products);
-  } catch (error) {
-    console.log("[PRODUCTS_GET]", error);
-    return new NextResponse("Internal error", { status: 500 });
-  }
-}
+} 

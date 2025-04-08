@@ -7,11 +7,9 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs'
-
+import { CartProvider } from '@/lib/cart-context'
 import './globals.css'
 import { Toaster } from 'sonner'
-
-
 
 export const metadata: Metadata = {
   title: 'Clerk Next.js Quickstart',
@@ -27,9 +25,10 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`antialiased`}>
-          
-          {children}
-          <Toaster />
+          <CartProvider>
+            {children}
+            <Toaster />
+          </CartProvider>
         </body>
       </html>
     </ClerkProvider>
