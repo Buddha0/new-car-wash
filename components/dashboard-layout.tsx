@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
   Calendar,
@@ -20,11 +20,12 @@ import {
   Users,
   Wrench,
   X,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+  ShoppingBag,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,27 +35,27 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardLayoutProps {
-  children: React.ReactNode
-  userRole: "admin" | "user" | "employee"
+  children: React.ReactNode;
+  userRole: "admin" | "user" | "employee";
 }
 
 export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  const [isMounted, setIsMounted] = useState(false)
-  const [notifications, setNotifications] = useState(3)
+  const pathname = usePathname();
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [notifications, setNotifications] = useState(3);
 
   // Prevent hydration errors
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   if (!isMounted) {
-    return null
+    return null;
   }
 
   const adminNavItems = [
@@ -62,42 +63,70 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
     { title: "Bookings", href: "/dashboard/admin/bookings", icon: Calendar },
     { title: "Users", href: "/dashboard/admin/users", icon: Users },
     { title: "Services", href: "/dashboard/admin/services", icon: Car },
-    
-  ]
+    { title: "Products", href: "/dashboard/admin/products", icon: ShoppingBag },
+  ];
 
   const userNavItems = [
     { title: "Dashboard", href: "/dashboard/user", icon: Home },
     { title: "Book Service", href: "/dashboard/user/book", icon: Calendar },
     { title: "My Bookings", href: "/dashboard/user/bookings", icon: Car },
+    { title: "Products", href: "/dashboard/user/products", icon: ShoppingBag },
     { title: "Payments", href: "/dashboard/user/payments", icon: CreditCard },
     { title: "Reviews", href: "/dashboard/user/reviews", icon: Star },
     { title: "Profile", href: "/dashboard/user/profile", icon: User },
-  ]
+  ];
 
   const employeeNavItems = [
     { title: "Dashboard", href: "/dashboard/employee", icon: Home },
-    { title: "My Schedule", href: "/dashboard/employee/schedule", icon: Calendar },
+    {
+      title: "My Schedule",
+      href: "/dashboard/employee/schedule",
+      icon: Calendar,
+    },
     { title: "Assigned Tasks", href: "/dashboard/employee/tasks", icon: Car },
-    { title: "Performance", href: "/dashboard/employee/performance", icon: BarChart3 },
-    { title: "Feedback", href: "/dashboard/employee/feedback", icon: MessageSquare },
+    {
+      title: "Performance",
+      href: "/dashboard/employee/performance",
+      icon: BarChart3,
+    },
+    {
+      title: "Feedback",
+      href: "/dashboard/employee/feedback",
+      icon: MessageSquare,
+    },
     { title: "Profile", href: "/dashboard/employee/profile", icon: User },
-  ]
+  ];
 
-  const navItems = userRole === "admin" ? adminNavItems : userRole === "user" ? userNavItems : employeeNavItems
+  const navItems =
+    userRole === "admin"
+      ? adminNavItems
+      : userRole === "user"
+      ? userNavItems
+      : employeeNavItems;
 
-  const roleLabel = userRole === "admin" ? "Administrator" : userRole === "user" ? "Customer" : "Employee"
+  const roleLabel =
+    userRole === "admin"
+      ? "Administrator"
+      : userRole === "user"
+      ? "Customer"
+      : "Employee";
 
-  const userName = userRole === "admin" ? "John Admin" : userRole === "user" ? "Sarah Customer" : "Mike Employee"
+  const userName =
+    userRole === "admin"
+      ? "John Admin"
+      : userRole === "user"
+      ? "Sarah Customer"
+      : "Mike Employee";
 
   const handleRoleChange = (value: string) => {
     if (value === "admin") {
-      router.push("/dashboard/admin")
+      router.push("/dashboard/admin");
     } else if (value === "user") {
-      router.push("/dashboard/user")
+      router.push("/dashboard/user");
     } else if (value === "employee") {
-      router.push("/dashboard/employee")
+      router.push("/dashboard/employee");
     }
-  }
+  };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -126,7 +155,9 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-accent",
-                    pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                    pathname === item.href
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground"
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -167,7 +198,10 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Switch Dashboard</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={userRole} onValueChange={handleRoleChange}>
+              <DropdownMenuRadioGroup
+                value={userRole}
+                onValueChange={handleRoleChange}
+              >
                 <DropdownMenuRadioItem value="admin">
                   <Users className="mr-2 h-4 w-4" />
                   <span>Admin Dashboard</span>
@@ -207,13 +241,16 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
               <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
             </svg>
             {notifications > 0 && (
-              <Badge variant="destructive" className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs">
+              <Badge
+                variant="destructive"
+                className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 text-xs"
+              >
                 {notifications}
               </Badge>
             )}
             <span className="sr-only">Toggle notifications</span>
           </Button>
-     
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
@@ -227,7 +264,9 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{userName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{roleLabel}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {roleLabel}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -259,7 +298,9 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-accent",
-                  pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground",
+                  pathname === item.href
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground"
                 )}
               >
                 <item.icon className="h-5 w-5" />
@@ -280,6 +321,5 @@ export function DashboardLayout({ children, userRole }: DashboardLayoutProps) {
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
     </div>
-  )
+  );
 }
-
