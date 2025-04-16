@@ -7,13 +7,29 @@ import { Droplets, Menu } from "lucide-react";
 import Link from "next/link";
 
 export default async function Header() {
-
+    // Get user's role from session claims
+    const { sessionClaims } = await auth();
     
+    // Define metadata type
+    type UserMetadata = {
+      role?: 'customer' | 'employee' | 'admin';
+    };
+    
+    // Get user role from session claims
+    const metadata = sessionClaims?.metadata as UserMetadata || {};
+    const role = metadata.role;
+    
+    // Determine dashboard link based on role
+    let dashboardLink = "/dashboard";
+    if (role === "admin") {
+        dashboardLink = "/dashboard/admin";
+    } else if (role === "employee") {
+        dashboardLink = "/dashboard/employee";
+    } else if (role === "customer") {
+        dashboardLink = "/dashboard/user";
+    }
     
     return (
-
-
-
         <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex justify-center bg-red-500 items-center">
             <div className="container flex h-16 items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -23,30 +39,30 @@ export default async function Header() {
 
                 {/* Desktop Navigation */}
                 <nav className="hidden md:flex items-center gap-6">
-                    <Link href="#about" className="text-sm font-medium hover:text-primary">
+                    <Link href="/" className="text-sm font-medium hover:text-primary">
                         Home
                     </Link>
-                    <Link href="#services" className="text-sm font-medium hover:text-primary">
-                        Dashboard
-                    </Link>
+                    <SignedIn>
+                        <Link href={dashboardLink} className="text-sm font-medium hover:text-primary">
+                            Dashboard
+                        </Link>
+                    </SignedIn>
                     <Link href="#services" className="text-sm font-medium hover:text-primary">
                         Cart
                     </Link>
-
                 </nav>
 
                 <div className="flex items-center gap-4">
-
                     <Button asChild className="hidden md:inline-flex">
                         <Link href="#booking">Book Now</Link>
                     </Button>
                     <SignedOut>
-                                    <SignInButton />
-                                    <SignUpButton />
-                                </SignedOut>
-                                <SignedIn>
-                                    <UserButton />
-                                </SignedIn>
+                        <SignInButton />
+                        <SignUpButton />
+                    </SignedOut>
+                    <SignedIn>
+                        <UserButton />
+                    </SignedIn>
 
                     {/* Mobile Navigation */}
                     <Sheet>
@@ -58,9 +74,14 @@ export default async function Header() {
                         </SheetTrigger>
                         <SheetContent side="right" className="w-[300px] sm:w-[400px]">
                             <nav className="flex flex-col gap-4 mt-8">
-                                <Link href="#about" className="text-base font-medium hover:text-primary">
-                                    About
+                                <Link href="/" className="text-base font-medium hover:text-primary">
+                                    Home
                                 </Link>
+                                <SignedIn>
+                                    <Link href={dashboardLink} className="text-base font-medium hover:text-primary">
+                                        Dashboard
+                                    </Link>
+                                </SignedIn>
                                 <Link href="#services" className="text-base font-medium hover:text-primary">
                                     Services
                                 </Link>
@@ -86,13 +107,11 @@ export default async function Header() {
                                 <Button className="mt-4 w-full" asChild>
                                     <Link href="#booking">Book Now</Link>
                                 </Button>
-                               
                             </nav>
                         </SheetContent>
                     </Sheet>
                 </div>
             </div>
         </header>
-
     )
 }

@@ -7,7 +7,6 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs'
-import { CartProvider } from '@/lib/cart-context'
 import './globals.css'
 import { Toaster } from 'sonner'
 
@@ -25,10 +24,8 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`antialiased`}>
-          <CartProvider>
-            {children}
-            <Toaster />
-          </CartProvider>
+          {children}
+          <Toaster />
         </body>
       </html>
     </ClerkProvider>

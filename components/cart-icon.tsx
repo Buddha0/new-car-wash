@@ -1,13 +1,14 @@
 "use client"
 
 import { ShoppingCart } from "lucide-react"
-import { useCart } from "@/lib/cart-context"
+import { useCart } from "@/hooks/use-cart"
 import Link from "next/link"
 import { Button } from "./ui/button"
 import { Badge } from "./ui/badge"
 
 export function CartIcon() {
-  const { totalItems } = useCart()
+  const { items } = useCart()
+  const totalItems = items.length
 
   return (
     <Link href="/dashboard/user/cart">

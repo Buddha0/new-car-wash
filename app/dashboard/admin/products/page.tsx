@@ -44,9 +44,22 @@ export default function ProductsPage() {
     try {
       const response = await fetch("/api/products");
       const data = await response.json();
-      setProducts(data);
+      
+      // Check if data is an array before setting it
+      if (Array.isArray(data)) {
+        setProducts(data);
+      } else if (data && typeof data === 'object' && Array.isArray(data.products)) {
+        // Handle case where API returns { products: [] }
+        setProducts(data.products);
+      } else {
+        console.error("Unexpected API response format:", data);
+        setProducts([]);
+        toast.error("Invalid product data format received");
+      }
     } catch (error) {
+      console.error("Failed to fetch products:", error);
       toast.error("Failed to fetch products");
+      setProducts([]);
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +107,7 @@ export default function ProductsPage() {
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
           </div>
-        ) : products.length === 0 ? (
+        ) : products?.length === 0 ? (
           <div className="text-center py-12">
             <Package className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-4 text-lg font-semibold">No products found</h3>
@@ -102,7 +115,7 @@ export default function ProductsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {products.map((product) => (
+            {products?.map((product) => (
               <Card key={product.id} className="flex flex-col">
                 <CardHeader>
                   <div className="aspect-square relative overflow-hidden rounded-lg">

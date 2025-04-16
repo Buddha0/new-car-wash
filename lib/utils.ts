@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 export const formatPrice = (price: number) => {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency: "NPR",
+    currencyDisplay: "narrowSymbol"
   }).format(price);
 };

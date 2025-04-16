@@ -26,7 +26,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { toast } from "sonner";
-import { useCart } from "@/lib/cart-context";
+import { useCart } from "@/hooks/use-cart";
 
 interface Product {
   id: string;

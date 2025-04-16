@@ -25,10 +25,12 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 export default function CartClient() {
   const { items, removeItem, updateQuantity, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const router = useRouter();
 
   const subtotal = items.reduce((total, item) => {
     return total + item.price * item.quantity;
@@ -38,14 +40,13 @@ export default function CartClient() {
   const total = subtotal + tax;
 
   const handleCheckout = () => {
-    setIsCheckingOut(true);
-
-    // Simulate checkout process
-    setTimeout(() => {
-      toast.success("Order placed successfully!");
-      clearCart();
-      setIsCheckingOut(false);
-    }, 2000);
+    if (items.length === 0) {
+      toast.error("Your cart is empty");
+      return;
+    }
+    
+    // Navigate to checkout page for eSewa payment
+    router.push("/dashboard/user/checkout");
   };
 
   return (
@@ -179,10 +180,7 @@ export default function CartClient() {
                       Processing...
                     </>
                   ) : (
-                    <>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Checkout
-                    </>
+                    "Checkout with eSewa"
                   )}
                 </Button>
               </CardFooter>
